@@ -16,6 +16,7 @@ INDICATOR_PIN = 4
 
 NETWORK_MS = 20
 WIFI_RETRY_MS = 30000
+NTP_TASK_MS = 5000
 BRIGHTNESS_MS = 100
 CLOCK_MS = 1000
 STATUS_MS = 1000
@@ -63,6 +64,7 @@ def help_text():
         "  lux          toggle lux messages",
         "  lux on       enable lux messages",
         "  lux off      disable lux messages",
+        "  cycle        run digit cycle test",
         "  HH:MM        display a test time, e.g. 12:31",
     ]
     return "\r\n".join(lines)
@@ -115,17 +117,22 @@ def app_status_lines():
         "  Lux messages: {}".format(show_lux),
     ]
 
+
 def cycle_test(driver):
     CYCLE_ON_MS = 500
     CYCLE_OFF_MS = 150
-    
+
     for digit in range(10):
         leds = []
 
         if digit in (1, 2):
             leds.append(HOURS_TENS + digit)
+
         leds.append(HOURS_UNITS + digit)
-        leds.append(MINUTES_TENS + digit)
+
+        if digit <= 5:
+            leds.append(MINUTES_TENS + digit)
+
         leds.append(MINUTES_UNITS + digit)
 
         driver.write_leds(tuple(leds))
@@ -133,7 +140,8 @@ def cycle_test(driver):
 
         driver.clear()
         sleep_ms(CYCLE_OFF_MS)
-        
+
+
 def main():
     global fatal_led_on, pot_percent
 
@@ -161,7 +169,6 @@ def main():
     net.connect_wifi()
     if net.wlan.isconnected():
         driver.set_status("not synced")
-        time_util.sync_time()
         net.start_server()
 
     update_indicator_status(driver, net, time_util, sched)
@@ -178,12 +185,12 @@ def main():
         if not net.wlan.isconnected():
             net.ensure_wifi(timeout_s=5)
 
-        if net.wlan.isconnected():
-            if net.server_socket is None:
-                net.start_server()
+        if net.wlan.isconnected() and net.server_socket is None:
+            net.start_server()
 
-            if not time_util.has_valid_time():
-                time_util.sync_time()
+    def ntp_task():
+        if net.wlan.isconnected():
+            time_util.resync_time()
 
     def network_task():
         net.update()
@@ -242,6 +249,7 @@ def main():
 
     sched.add_periodic(NETWORK_MS, network_task)
     sched.add_periodic(WIFI_RETRY_MS, wifi_task)
+    sched.add_periodic(NTP_TASK_MS, ntp_task)
     sched.add_periodic(BRIGHTNESS_MS, brightness_task)
     sched.add_periodic(CLOCK_MS, clock_task)
     sched.add_periodic(STATUS_MS, status_task)

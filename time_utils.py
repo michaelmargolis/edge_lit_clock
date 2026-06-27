@@ -8,6 +8,7 @@ class TimeUtils:
     SYNC_INTERVAL_S = 3600
     STALE_SYNC_AGE_S = 6 * 3600
     STALE_RETRY_INTERVAL_S = 300
+    INITIAL_SYNC_RETRY_INTERVAL_S = 30
     NTP_HOST = "192.168.50.1"
     NTP_RETRIES = 3
 
@@ -52,10 +53,16 @@ class TimeUtils:
         try:
             now = time.time()
 
-            if self.next_sync_time is None:
-                self.sync_time()
-                now = time.time()
-                self.next_sync_time = now + self.SYNC_INTERVAL_S
+            if not self.initial_sync_done:
+                if self.next_sync_time is None or now >= self.next_sync_time:
+                    if self.sync_time():
+                        now = time.time()
+                        self.next_sync_time = now + self.SYNC_INTERVAL_S
+                    else:
+                        now = time.time()
+                        self.next_sync_time = (
+                            now + self.INITIAL_SYNC_RETRY_INTERVAL_S
+                        )
                 return
 
             if self.last_successful_sync_time is not None:
@@ -92,7 +99,6 @@ class TimeUtils:
 
     def get_time_string(self, utc_offset_hours=0, dst_region=None, is_24hr=True):
         try:
-            self.resync_time()
             utc_ts = time.time()
             dst_offset_hours = self.get_dst_offset_hours(utc_ts, dst_region)
             self.dst_region = dst_region
