@@ -12,9 +12,9 @@ if USE_PIXEL:
 
 class LedDigitsDriver:
     STATUS_COLORS = {
-        "not connected": (255, 0, 0),
-        "not synced": (0, 128, 255),
-        "synced": (0, 0, 255),
+        "not connected": (255, 0, 0),  # red
+        "not synced": (255, 127, 0),   # orange
+        "synced": (0, 0, 255),         # blue 
     }
 
     def __init__(
@@ -183,7 +183,6 @@ class LedDigitsDriver:
         if status not in self.STATUS_COLORS:
             self._record_error("Unknown status: {}".format(status))
             return False
-
         self.set_indicator_color(self.STATUS_COLORS[status])
         self.indicator_status = status
         return True
