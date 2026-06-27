@@ -56,7 +56,7 @@ class ClockNetwork:
             self.wlan.active(True)
 
             if not self.wlan.isconnected():
-                print("Connecting to Wi-Fi...")
+                print("Connecting to SSID {} ...".format(self.ssid))
                 self.wlan.connect(self.ssid, self.password)
 
                 start = time.time()
