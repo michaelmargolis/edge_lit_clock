@@ -15,6 +15,7 @@ class TimeUtils:
         self.next_sync_time = None
         self.last_successful_sync_time = None
         self.sync_stale = True
+        self.initial_sync_done = False
         self.dst_region = None
         self.dst_active = False
 
@@ -39,6 +40,7 @@ class TimeUtils:
                 now = time.time()
                 self.last_successful_sync_time = now
                 self.sync_stale = False
+                self.initial_sync_done = True
                 return True
             except Exception as e:
                 self._record_error("NTP sync failed: {}".format(e))
@@ -72,8 +74,11 @@ class TimeUtils:
             self._record_error("Time resync failed: {}".format(e))
             self.sync_stale = True
 
+    def has_valid_time(self):
+        return self.initial_sync_done
+
     def is_time_stale(self):
-        return self.sync_stale
+        return (not self.initial_sync_done) or self.sync_stale
 
     def seconds_since_last_sync(self):
         if self.last_successful_sync_time is None:
@@ -157,8 +162,9 @@ class TimeUtils:
 
     def status_lines(self):
         return [
+            "  Initial sync done: {}".format(self.initial_sync_done),
             "  Synced: {}".format(self.last_successful_sync_time is not None),
-            "  Stale: {}".format(self.sync_stale),
+            "  Stale: {}".format(self.is_time_stale()),
             "  Last sync age: {}".format(
                 self._fmt_age(self.seconds_since_last_sync())
             ),

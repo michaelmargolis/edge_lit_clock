@@ -156,6 +156,7 @@ def main():
 
     driver.set_brightness(50)
     driver.set_status("not connected")
+    driver.display_time("0:00")
 
     net.connect_wifi()
     if net.wlan.isconnected():
@@ -175,8 +176,14 @@ def main():
 
     def wifi_task():
         if not net.wlan.isconnected():
-            if net.ensure_wifi(timeout_s=5) and net.server_socket is None:
+            net.ensure_wifi(timeout_s=5)
+
+        if net.wlan.isconnected():
+            if net.server_socket is None:
                 net.start_server()
+
+            if not time_util.has_valid_time():
+                time_util.sync_time()
 
     def network_task():
         net.update()
@@ -192,6 +199,11 @@ def main():
         driver.set_brightness(brightness)
 
     def clock_task():
+        if not time_util.has_valid_time():
+            if driver.displayed_time != "0:00":
+                driver.display_time("0:00")
+            return
+
         snapshot = time_util.get_time_string(
             utc_offset_hours=UTC_OFFSET_HOURS,
             dst_region=DST_REGION,
