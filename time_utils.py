@@ -9,8 +9,9 @@ class TimeUtils:
     STALE_SYNC_AGE_S = 6 * 3600
     STALE_RETRY_INTERVAL_S = 300
     INITIAL_SYNC_RETRY_INTERVAL_S = 30
-    NTP_HOST = "192.168.50.1"
-    NTP_RETRIES = 3
+    LOCAL_NTP_HOST = "192.168.50.1" 
+    REMOTE_NTP_HOSE = "pool.ntp.org"
+    NTP_HOST = LOCAL_NTP_HOST
 
     def __init__(self, register_reporter=None):
         self.next_sync_time = None
@@ -34,20 +35,19 @@ class TimeUtils:
         self.last_error_time = int(time.time())
 
     def sync_time(self):
-        for attempt in range(self.NTP_RETRIES):
-            try:
-                ntptime.host = self.NTP_HOST
-                ntptime.settime()
-                now = time.time()
-                self.last_successful_sync_time = now
-                self.sync_stale = False
-                self.initial_sync_done = True
-                return True
-            except Exception as e:
-                self._record_error("NTP sync failed: {}".format(e))
-                time.sleep(1)
+        try:
+            ntptime.host = self.NTP_HOST
+            ntptime.settime()
 
-        return False
+            now = time.time()
+            self.last_successful_sync_time = now
+            self.sync_stale = False
+            self.initial_sync_done = True
+            return True
+
+        except Exception as e:
+            self._record_error("NTP sync failed: {}".format(e))
+            return False
 
     def resync_time(self):
         try:
